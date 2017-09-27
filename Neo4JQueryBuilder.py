@@ -9,10 +9,9 @@ def buildInsertNodeQuery(node_label, attribute_list):
 
 #Para que en caso de que ya exista el nodo (porque ya su id está), solo lo actualice.
 #IMPORTANTE attribute_list debe incluír el par (id: valor) de lo contrario habrá error en base de datos
-def buildInsertOrUpdateNodeQuery(node_label, attribute_list):
+def buildInsertOrUpdateNodeQuery(node_label, node_id,attribute_list):
     iuNodeQuery = ""
-    iuNodeQuery += "MERGE (n:" + node_label + "{ id: '" +  attribute_list[0][1] + "'}) "
-    attribute_list.pop(0)
+    iuNodeQuery += "MERGE (n:" + node_label + "{ id: '" +  node_id + "'}) "
     if attribute_list:
         iuNodeQuery += "SET n += " + getAttributes(attribute_list)
     return iuNodeQuery
