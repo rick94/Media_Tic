@@ -233,15 +233,18 @@ def addCommentsAndRepliesToCSV(comments, nodeoutfile, edgeoutfile):
         save_csv(nodeoutfile, csv_data, file_mode="a")
         if 'comments' in comment:
             for reply in comment['comments']['data']:
-                reply_id = [reply['id']]
-                csv_data = []
-                csv_data.insert(0, reply_id)
-                save_csv(nodeoutfile, csv_data, file_mode="a")
-                #insertar las aristas
-                edge = [comment['id'], reply['id']]
-                csv_data = []
-                csv_data.insert(0, edge)
-                save_csv(edgeoutfile, csv_data, file_mode="a")
+                list_of_user_in_reply = []
+                if reply['from']['id'] not in list_of_user_in_reply:
+                    list_of_user_in_reply.append(reply['from']['id'])
+                    reply_id = [reply['from']['id']]
+                    csv_data = []
+                    csv_data.insert(0, reply_id)
+                    save_csv(nodeoutfile, csv_data, file_mode="a")
+                    #insertar las aristas
+                    edge = [reply['from']['id'], comment['id']]
+                    csv_data = []
+                    csv_data.insert(0, edge)
+                    save_csv(edgeoutfile, csv_data, file_mode="a")
 
 def addPostsAndCommentsToCSV(post, outfile_nodes, outfile_edges):
     list_posts = [post['id']]
@@ -250,21 +253,24 @@ def addPostsAndCommentsToCSV(post, outfile_nodes, outfile_edges):
     save_csv(outfile_nodes, csv_data, file_mode="a")
     if 'comments' in post:
         for comment in post['comments']['data']:
-            list_comment_id = [comment['id']]
-            csv_data = []
-            csv_data.insert(0, list_comment_id)
-            save_csv(outfile_nodes, csv_data, file_mode="a")
-            # insertar las aristas
-            edge = [post['id'], comment['id']]
-            csv_data = []
-            csv_data.insert(0, edge)
-            save_csv(outfile_edges, csv_data, file_mode="a")
+            list_of_user_in_post = []
+            if comment['from']['id'] not in list_of_user_in_post:
+                list_of_user_in_post.append(comment['from']['id'])
+                list_comment_id = [comment['from']['id']]
+                csv_data = []
+                csv_data.insert(0, list_comment_id)
+                save_csv(outfile_nodes, csv_data, file_mode="a")
+                # insertar las aristas
+                edge = [comment['from']['id'], post['id']]
+                csv_data = []
+                csv_data.insert(0, edge)
+                save_csv(outfile_edges, csv_data, file_mode="a")
 
 def buildCommentsCSVs(client_id, client_secret, site_id, outfile_nodes, outfile_edges, version="2.10"):
     fb_token = getAccessToken(client_id, client_secret)
     since = '1506902400'
     until = '1508198400'
-    field_list = 'id,created_time,name,comments{id,message,comments{id,message}}'
+    field_list = 'id,message,created_time,comments{id,message,comments{id,message,from}}'
     #data_url = 'https://graph.facebook.com/v' + version + '/' + site_id + '?fields=posts{' + field_list + '}&limit=100&' + fb_token
 
     #&since='+since+'&until='+ until
@@ -298,7 +304,7 @@ def buildPostCSVs(client_id, client_secret, site_id, outfile_nodes, outfile_edge
     fb_token = getAccessToken(client_id, client_secret)
     since = '1506902400'
     until = '1508198400'
-    field_list = 'id,comments{id}'
+    field_list = 'id,comments{id,from}'
     #data_url = 'https://graph.facebook.com/v' + version + '/' + site_id + '?fields=posts{' + field_list + '}&limit=100&' + fb_token
     data_url = 'https://graph.facebook.com/v' + version + '/' + site_id + '/posts?fields=' + field_list + '&limit=100&since='+since+'&until='+until+'&' + fb_token
     next_item = url_retry(data_url)
