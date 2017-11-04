@@ -21,16 +21,16 @@ AppSecret = '460c5a58dd6ddd6997b2645b1ad37cdd'
 #Comments = scrape_fb(AppID, AppSecret, '115872105050_10159475804280051', "sample_comments.csv", '2.7', 'comments', '2017-10-02')
 #comments = scrape_fb('264737207353432','460c5a58dd6ddd6997b2645b1ad37cdd','115872105050_10159350223445051',scrape_mode="comments")
 
-buildCommentsCSVs(AppID, AppSecret, dicMedios['Nacion'], 'nodos_comments_Nacion.csv', 'aristas_comments_Nacion.csv', version="2.10")
+#buildCommentsCSVs(AppID, AppSecret, dicMedios['Nacion'], 'nodos_comments_Nacion.csv', 'aristas_comments_Nacion.csv', version="2.10")
 
 
 buildPostCSVs(AppID, AppSecret, dicMedios['Nacion'], 'nodos_posts_Nacion.csv', 'aristas_posts_Nacion.csv', version="2.10")
 
 
-buildCommentsCSVs(AppID, AppSecret, dicMedios['CRHoy'], 'nodos_comments_CRHoy.csv', 'aristas_comments_CRHoy.csv', version="2.10")
+#buildCommentsCSVs(AppID, AppSecret, dicMedios['CRHoy'], 'nodos_comments_CRHoy.csv', 'aristas_comments_CRHoy.csv', version="2.10")
 
 
-buildPostCSVs(AppID, AppSecret, dicMedios['CRHoy'], 'nodos_posts_CRHoy.csv', 'aristas_posts_CRHoy.csv', version="2.10")
+#buildPostCSVs(AppID, AppSecret, dicMedios['CRHoy'], 'nodos_posts_CRHoy.csv', 'aristas_posts_CRHoy.csv', version="2.10")
 
 #KonzulTICAS
 #115872105050/posts?fields=id,created_time,name,comments{id,message,comments{id,message}}&limit=10
