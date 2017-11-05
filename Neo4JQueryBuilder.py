@@ -49,13 +49,13 @@ def getAttributes(attribute_list):
     return attributes
 
 
-#MATCH (a:Person {name: 'Juan'}), (b:Person {name: 'Carlos'}) MERGE (a)-[r:DETESTS]- (b) set r += {place:'TEHK'}
-t = buildInsertNodeQuery("Post",[("id","12345"),("name","Nacion"),("fecha","enero"),("cantidad", 12),("lugar","Desampa")])
-t1 = buildInsertOrUpdateNodeQuery("Post","12345",[("name","Nacion"),("fecha","enero"),("cantidad", 12),("lugar","Desampa")])
-v = buildInsertRelationshipQuery("BELONGS_TO","Post","123","User","34",[("id","12345"),("name","Nacion"),("fecha","enero"),("cantidad", 12),("lugar","Desampa")])
-at = getAttributes([("id","12345"),("name","Nacion"),("fecha","enero"),("cantidad", 12),("lugar","Desampa")])
-r1 = buildInsertOrUpdateRelationshipQuery("BELONGS_TO","Post","123","User","34",[("id","12345"),("name","Nacion"),("fecha","enero"),("cantidad", 12),("lugar","Desampa")])
+##MATCH (a:Person {name: 'Juan'}), (b:Person {name: 'Carlos'}) MERGE (a)-[r:DETESTS]- (b) set r += {place:'TEHK'}
+#t = buildInsertNodeQuery("Post",[("id","12345"),("name","Nacion"),("fecha","enero"),("cantidad", 12),("lugar","Desampa")])
+#t1 = buildInsertOrUpdateNodeQuery("Post","12345",[("name","Nacion"),("fecha","enero"),("cantidad", 12),("lugar","Desampa")])
+#v = buildInsertRelationshipQuery("BELONGS_TO","Post","123","User","34",[("id","12345"),("name","Nacion"),("fecha","enero"),("cantidad", 12),("lugar","Desampa")])
+#at = getAttributes([("id","12345"),("name","Nacion"),("fecha","enero"),("cantidad", 12),("lugar","Desampa")])
+#r1 = buildInsertOrUpdateRelationshipQuery("BELONGS_TO","Post","123","User","34",[("id","12345"),("name","Nacion"),("fecha","enero"),("cantidad", 12),("lugar","Desampa")])
 
-print(t1)
-print(r1)
+#print(t1)
+#print(r1)
 #LKJALSDKJALSKDJFA

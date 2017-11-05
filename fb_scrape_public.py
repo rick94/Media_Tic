@@ -1,9 +1,8 @@
-import sys
+from Neo4JQueryBuilder import *
+
 import copy
 import csv
-import datetime
 import json
-import socket
 import time
 import urllib.request
 
@@ -108,21 +107,49 @@ def addPostsAndCommentsToCSV(post, outfile_nodes, outfile_edges):
                 save_csv(outfile_edges, csv_data, file_mode="a")
 
 
-def getEngagement(reactions):
-    return 1
+def getEngagement(reaction, post_id):
+    reaction_type = reaction['type']
+    reactor_id = reaction['id']
+    reactor_name = reaction['name']
 
 
-def insertCommentData(post_id):
-    return 0
+def getCommentRelatedData(comment, post_id):
+    comment_id = comment['id']
+    comment_date = comment['created_time']
+    user_id = comment['from']['id']
+    attributeList = [('date',comment_date)]
+    comment_node_insertion_query = buildInsertOrUpdateNodeQuery('Comment',comment_id, attributeList)
+    attributeList = []
+    post_comment_relationship_query = buildInsertOrUpdateRelationshipQuery('BELONGS_TO', 'Comment', comment_id, 'Post', post_id, attributeList)
+    user_id = comment['from']['id']
+    user_name = comment['from']['name']
+    attributeList = [('name', user_name)]
+    user_node_insertion_query = buildInsertOrUpdateNodeQuery('User', user_id, attributeList)
+    attributeList = []
+    comment_user_relationship_query = buildInsertOrUpdateRelationshipQuery('POSTED', 'User', user_id,)
 
-def insertPostData(post):
-    print(1)
+
+def getPostRelatedData(post, site_name):
+    queryList = []
     post_id = post['id']
     post_date = post['created_time']
     post_link = post['link']
     post_facebook_link = 'https://www.facebook.com/' + post_id
     post_title = post['name']
-    post_engagement = getEngagement(post['reactions'])
+    post_reaction_count = post['like']['summary']['total_count']  + post['love']['summary']['total_count'] +\
+                          post['wow']['summary']['total_count']   + post['haha']['summary']['total_count'] +\
+                          post['sad']['summary']['total_count']   + post['angry']['summary']['total_count']
+    post_share_count = post['shares']['count'] if 'shares' in post else 0
+    post_engagement = post_reaction_count + post_share_count
+    attributeList = [('date',post_date),('link',post_link),\
+                     ('fb_link',post_facebook_link),('title',post_title),\
+                     ('share_count',post_share_count), ('site', site_name), \
+                     ('reaction_count',post_reaction_count),('engagement',post_engagement)]
+    post_node_insertion_query = buildInsertOrUpdateNodeQuery('Post',post_id, attributeList)
+    queryList.append(post_node_insertion_query)
+    for comment in post['comments']['data']:
+        getCommentRelatedData(comment, post_id)
+    print (2)
 
 
 def buildCommentsCSVs(client_id, client_secret, site_id, outfile_nodes, outfile_edges, version="2.10"):
@@ -150,13 +177,16 @@ def addPosts(client_id, client_secret, site_id, site_name, since_date,until_date
     fb_token = getAccessToken(client_id, client_secret)
     since = '1506902400'
     until = '1508198400'
-    field_list = 'id,name,created_time,link,comments{id,from},reactions'
+    reaction_count_queries = 'reactions.type(LIKE).limit(0).summary(1).as(like),reactions.type(WOW).limit(0).summary(1).as(wow),' \
+                             'reactions.type(SAD).limit(0).summary(1).as(sad),reactions.type(HAHA).limit(0).summary(1).as(haha),' \
+                             'reactions.type(LOVE).limit(0).summary(1).as(love),reactions.type(ANGRY).limit(0).summary(1).as(angry),'
+    field_list = 'id,name,created_time,link,shares,comments{id,from,created_time,comments{id,from,created_time,reactions},reactions},'+reaction_count_queries+'reactions'
     data_url = 'https://graph.facebook.com/v' + version + '/' + site_id + '/posts?fields=' + field_list + '&limit=100&since='+since+'&until='+until+'&' + fb_token
     next_item = url_retry(data_url)
 
 
     for post in next_item['data']:
-        insertPostData(post)
+        getPostRelatedData(post, site_name)
 
     while 'paging' in next_item and 'next' in next_item['paging']:
         next_item = url_retry(next_item['paging']['next'])
