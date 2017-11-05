@@ -65,69 +65,51 @@ def getAccessToken(client_id, client_secret):
     fb_token = 'access_token=' + json.loads(fb_urlobj.read().decode(encoding="latin1"))['access_token']
     return fb_token
 
-def addCommentsAndRepliesToCSV(comments, nodeoutfile, edgeoutfile):
-    for comment in comments['data']:
-        parent_comment_id = [ comment['id'] ]
-        csv_data = []
-        csv_data.insert(0, parent_comment_id)
-        save_csv(nodeoutfile, csv_data, file_mode="a")
-        if 'comments' in comment:
-            for reply in comment['comments']['data']:
-                list_of_user_in_reply = []
-                if reply['from']['id'] not in list_of_user_in_reply:
-                    list_of_user_in_reply.append(reply['from']['id'])
-                    reply_id = [reply['from']['id']]
-                    csv_data = []
-                    csv_data.insert(0, reply_id)
-                    save_csv(nodeoutfile, csv_data, file_mode="a")
-                    #insertar las aristas
-                    edge = [reply['from']['id'], comment['id']]
-                    csv_data = []
-                    csv_data.insert(0, edge)
-                    save_csv(edgeoutfile, csv_data, file_mode="a")
+def getReactionRelatedData(reaction, reacted_object_id, reacted_object_label):
+    queryList = []
+    attributeList = [('name', reaction['name'])]
+    user_node_insertion_query = buildInsertOrUpdateNodeQuery('User', reaction['id'], attributeList)
+    attributeList = [('type', reaction['type'])]
+    reaction_user_relationship_query = buildInsertOrUpdateRelationshipQuery('REACTS_TO', 'User', reaction['id'], \
+                                                                            reacted_object_label, reacted_object_id, attributeList)
+    queryList.extend([user_node_insertion_query,reaction_user_relationship_query])
+    return queryList
 
-def addPostsAndCommentsToCSV(post, outfile_nodes, outfile_edges):
-    list_posts = [post['id']]
-    csv_data = []
-    csv_data.insert(0, list_posts)
-    save_csv(outfile_nodes, csv_data, file_mode="a")
-    if 'comments' in post:
-        for comment in post['comments']['data']:
-            list_of_user_in_post = []
-            if comment['from']['id'] not in list_of_user_in_post:
-                list_of_user_in_post.append(comment['from']['id'])
-                list_comment_id = [comment['from']['id']]
-                csv_data = []
-                csv_data.insert(0, list_comment_id)
-                save_csv(outfile_nodes, csv_data, file_mode="a")
-                # insertar las aristas
-                edge = [comment['from']['id'], post['id']]
-                csv_data = []
-                csv_data.insert(0, edge)
-                save_csv(outfile_edges, csv_data, file_mode="a")
-
-
-def getEngagement(reaction, post_id):
-    reaction_type = reaction['type']
-    reactor_id = reaction['id']
-    reactor_name = reaction['name']
-
+def getReplyRelatedData(reply, comment_id, post_id):
+    queryList = []
+    attributeList = [('date', reply['created_time'])]
+    reply_node_insertion_query = buildInsertOrUpdateNodeQuery('Comment',reply['id'],attributeList)
+    attributeList = []
+    post_comment_relationship_query = buildInsertOrUpdateRelationshipQuery('BELONGS_TO', 'Comment', reply['id'], 'Post', post_id, attributeList)
+    comment_reply_relationship_query= buildInsertOrUpdateRelationshipQuery('REPLIES_TO', 'Comment', reply['id'], 'Comment', comment_id, attributeList)
+    attributeList = [('name', reply['from']['name'])]
+    user_node_insertion_query = buildInsertOrUpdateNodeQuery('User', reply['from']['id'], attributeList)
+    attributeList = []
+    reply_user_relationship_query = buildInsertOrUpdateRelationshipQuery('POSTED', 'User', reply['from']['id'],'Comment',reply['id'],attributeList)
+    queryList.extend([reply_node_insertion_query,post_comment_relationship_query,comment_reply_relationship_query,user_node_insertion_query,reply_user_relationship_query])
+    if 'reactions' in reply:
+        for reaction in reply['reactions']['data']:
+            queryList.extend(getReactionRelatedData(reaction, reply['id'], 'Comment'))
+    return queryList
 
 def getCommentRelatedData(comment, post_id):
-    comment_id = comment['id']
-    comment_date = comment['created_time']
-    user_id = comment['from']['id']
-    attributeList = [('date',comment_date)]
-    comment_node_insertion_query = buildInsertOrUpdateNodeQuery('Comment',comment_id, attributeList)
+    queryList = []
+    attributeList = [('date',comment['created_time']),('text', comment['message'])]
+    comment_node_insertion_query = buildInsertOrUpdateNodeQuery('Comment',comment['id'], attributeList)
     attributeList = []
-    post_comment_relationship_query = buildInsertOrUpdateRelationshipQuery('BELONGS_TO', 'Comment', comment_id, 'Post', post_id, attributeList)
-    user_id = comment['from']['id']
-    user_name = comment['from']['name']
-    attributeList = [('name', user_name)]
-    user_node_insertion_query = buildInsertOrUpdateNodeQuery('User', user_id, attributeList)
+    post_comment_relationship_query = buildInsertOrUpdateRelationshipQuery('BELONGS_TO', 'Comment', comment['id'], 'Post', post_id, attributeList)
+    attributeList = [('name', comment['from']['name'])]
+    user_node_insertion_query = buildInsertOrUpdateNodeQuery('User', comment['from']['id'], attributeList)
     attributeList = []
-    comment_user_relationship_query = buildInsertOrUpdateRelationshipQuery('POSTED', 'User', user_id,)
-
+    comment_user_relationship_query = buildInsertOrUpdateRelationshipQuery('POSTED', 'User', comment['from']['id'],'Comment',comment['id'],attributeList)
+    queryList.extend([comment_node_insertion_query,post_comment_relationship_query,user_node_insertion_query,comment_user_relationship_query])
+    if 'comments' in comment:
+        for reply in comment['comments']['data']:
+            queryList.extend(getReplyRelatedData(reply, comment['id'], post_id))
+    if 'reactions' in comment:
+        for reaction in comment['reactions']['data']:
+            queryList.extend(getReactionRelatedData(reaction,comment['id'],'Comment'))
+    return queryList
 
 def getPostRelatedData(post, site_name):
     queryList = []
@@ -147,29 +129,19 @@ def getPostRelatedData(post, site_name):
                      ('reaction_count',post_reaction_count),('engagement',post_engagement)]
     post_node_insertion_query = buildInsertOrUpdateNodeQuery('Post',post_id, attributeList)
     queryList.append(post_node_insertion_query)
-    for comment in post['comments']['data']:
-        getCommentRelatedData(comment, post_id)
-    print (2)
+    if 'comments' in post:
+        for comment in post['comments']['data']:
+            queryList.extend(getCommentRelatedData(comment, post_id))
+    if 'reactions' in post:
+        for reaction in post['reactions']['data']:
+            queryList.extend(getReactionRelatedData(reaction,post_id,'Post'))
+        while 'paging' in post['reactions'] and 'next' in post['reactions']['paging']:
+            next_item = url_retry(post['reactions']['paging']['next'])
+            for reaction in next_item['data']:
+                queryList.extend(getReactionRelatedData(reaction, post_id,'Post'))
 
 
-def buildCommentsCSVs(client_id, client_secret, site_id, outfile_nodes, outfile_edges, version="2.10"):
-    fb_token = getAccessToken(client_id, client_secret)
-    since = '1506902400'
-    until = '1508198400'
-    field_list = 'id,message,created_time,comments{id,message,comments{id,message,from}}'
-
-    data_url = 'https://graph.facebook.com/v' + version + '/' + site_id + '/posts?fields=' + field_list + '&limit=100&since='+since+'&until='+until+'&' + fb_token
-    next_item = url_retry(data_url)
-
-    for post in next_item['data']:
-        if 'comments' in post:
-            addCommentsAndRepliesToCSV(post['comments'], outfile_nodes, outfile_edges )
-
-    while 'paging' in next_item and 'next' in next_item['paging']:
-        next_item = url_retry(next_item['paging']['next'])
-        for post in next_item['data']:
-            if 'comments' in post:
-                addCommentsAndRepliesToCSV(post['comments'], outfile_nodes, outfile_edges)
+    return queryList
 
 
 
@@ -180,18 +152,18 @@ def addPosts(client_id, client_secret, site_id, site_name, since_date,until_date
     reaction_count_queries = 'reactions.type(LIKE).limit(0).summary(1).as(like),reactions.type(WOW).limit(0).summary(1).as(wow),' \
                              'reactions.type(SAD).limit(0).summary(1).as(sad),reactions.type(HAHA).limit(0).summary(1).as(haha),' \
                              'reactions.type(LOVE).limit(0).summary(1).as(love),reactions.type(ANGRY).limit(0).summary(1).as(angry),'
-    field_list = 'id,name,created_time,link,shares,comments{id,from,created_time,comments{id,from,created_time,reactions},reactions},'+reaction_count_queries+'reactions'
+    field_list = 'id,name,created_time,link,shares,comments{id,from,created_time,comments{id,from,created_time,reactions,message},reactions,message},'+reaction_count_queries+'reactions'
     data_url = 'https://graph.facebook.com/v' + version + '/' + site_id + '/posts?fields=' + field_list + '&limit=100&since='+since+'&until='+until+'&' + fb_token
     next_item = url_retry(data_url)
-
 
     for post in next_item['data']:
         getPostRelatedData(post, site_name)
 
     while 'paging' in next_item and 'next' in next_item['paging']:
         next_item = url_retry(next_item['paging']['next'])
-        #for post in next_item['data']:
-            #addPostsAndCommentsToCSV(post, outfile_nodes, outfile_edges)
+        for post in next_item['data']:
+            getPostRelatedData(post, site_name)
+
 
 
 

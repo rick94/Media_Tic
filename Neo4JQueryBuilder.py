@@ -12,6 +12,7 @@ def buildInsertNodeQuery(node_label, attribute_list):
 def buildInsertOrUpdateNodeQuery(node_label, node_id,attribute_list):
     iuNodeQuery = ""
     iuNodeQuery += "MERGE (n:" + node_label + "{ id: '" +  node_id + "'}) "
+    #print(iuNodeQuery)
     if attribute_list:
         iuNodeQuery += "SET n += " + getAttributes(attribute_list)
     return iuNodeQuery
