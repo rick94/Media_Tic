@@ -12,9 +12,9 @@ def buildInsertNodeQuery(node_label, attribute_list):
 def buildInsertOrUpdateNodeQuery(node_label, node_id,attribute_list):
     iuNodeQuery = ""
     iuNodeQuery += "MERGE (n:" + node_label + "{ id: '" +  node_id + "'}) "
-    #print(iuNodeQuery)
     if attribute_list:
         iuNodeQuery += "SET n += " + getAttributes(attribute_list)
+    #print(iuNodeQuery)
     return iuNodeQuery
 
 #Metodo para establecer una relación entre dos nodos A - [r] -> B con los ids dados y con la lista de atributos dada
@@ -30,6 +30,7 @@ def buildInsertOrUpdateRelationshipQuery(relationship_name,label_A, id_A, label_
     iuRelationshipQuery = ""
     iuRelationshipQuery += "MATCH (a:" + label_A + " {id: '" + id_A + "'}), (b:" + label_B + " {id: '" + id_B + "'}) "
     iuRelationshipQuery += "MERGE (a)-[r:" + relationship_name + "]-(b) SET r +=" + getAttributes(attribute_list)
+    #print(iuRelationshipQuery)
     return iuRelationshipQuery
 
 def getAttributes(attribute_list):

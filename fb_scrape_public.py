@@ -1,11 +1,9 @@
 from Neo4JQueryBuilder import *
-
 import copy
 import csv
 import json
 import time
 import urllib.request
-
 
 def load_data(data, enc='utf-8'):
     if type(data) is str:
@@ -90,11 +88,15 @@ def getReplyRelatedData(reply, comment_id, post_id):
     if 'reactions' in reply:
         for reaction in reply['reactions']['data']:
             queryList.extend(getReactionRelatedData(reaction, reply['id'], 'Comment'))
+        while 'paging' in reply['reactions'] and 'next' in reply['reactions']['paging']:
+            reply['reactions'] = url_retry(reply['reactions']['paging']['next'])
+            for reaction in reply['reactions']['data']:
+                queryList.extend(getReactionRelatedData(reaction, reply['id'], 'Comment'))
     return queryList
 
 def getCommentRelatedData(comment, post_id):
     queryList = []
-    attributeList = [('date',comment['created_time']),('text', comment['message'])]
+    attributeList = [('date',comment['created_time']),('text', comment['message'] )]
     comment_node_insertion_query = buildInsertOrUpdateNodeQuery('Comment',comment['id'], attributeList)
     attributeList = []
     post_comment_relationship_query = buildInsertOrUpdateRelationshipQuery('BELONGS_TO', 'Comment', comment['id'], 'Post', post_id, attributeList)
@@ -106,9 +108,18 @@ def getCommentRelatedData(comment, post_id):
     if 'comments' in comment:
         for reply in comment['comments']['data']:
             queryList.extend(getReplyRelatedData(reply, comment['id'], post_id))
+        while 'paging' in comment['comments'] and 'next' in comment['comments']['paging']:
+            comment['comments'] = url_retry(comment['comments']['paging']['next'])
+            for reply in comment['comments']['data']:
+                queryList.extend(getReplyRelatedData(reply, comment['id'],post_id))
+
     if 'reactions' in comment:
         for reaction in comment['reactions']['data']:
             queryList.extend(getReactionRelatedData(reaction,comment['id'],'Comment'))
+            while 'paging' in comment['reactions'] and 'next' in comment['reactions']['paging']:
+                comment['reactions']  = url_retry(comment['reactions']['paging']['next'])
+                for reaction in comment['reactions']['data']:
+                    queryList.extend(getReactionRelatedData(reaction, comment['id'], 'Comment'))
     return queryList
 
 def getPostRelatedData(post, site_name):
@@ -117,7 +128,7 @@ def getPostRelatedData(post, site_name):
     post_date = post['created_time']
     post_link = post['link']
     post_facebook_link = 'https://www.facebook.com/' + post_id
-    post_title = post['name']
+    post_title = post['name'] if 'name' in post else 'Sin título'
     post_reaction_count = post['like']['summary']['total_count']  + post['love']['summary']['total_count'] +\
                           post['wow']['summary']['total_count']   + post['haha']['summary']['total_count'] +\
                           post['sad']['summary']['total_count']   + post['angry']['summary']['total_count']
@@ -132,20 +143,24 @@ def getPostRelatedData(post, site_name):
     if 'comments' in post:
         for comment in post['comments']['data']:
             queryList.extend(getCommentRelatedData(comment, post_id))
+        while 'paging' in post['comments'] and 'next' in post['comments']['paging']:
+            post['comments'] = url_retry(post['comments']['paging']['next'])
+            for comment in post['comments']['data']:
+                queryList.extend(getCommentRelatedData(comment, post_id))
+
     if 'reactions' in post:
         for reaction in post['reactions']['data']:
             queryList.extend(getReactionRelatedData(reaction,post_id,'Post'))
         while 'paging' in post['reactions'] and 'next' in post['reactions']['paging']:
-            next_item = url_retry(post['reactions']['paging']['next'])
-            for reaction in next_item['data']:
+            post['reactions'] = url_retry(post['reactions']['paging']['next'])
+            for reaction in post['reactions']['data']:
                 queryList.extend(getReactionRelatedData(reaction, post_id,'Post'))
-
-
     return queryList
 
 
 
 def addPosts(client_id, client_secret, site_id, site_name, since_date,until_date, version="2.10"):
+    queryList = []
     fb_token = getAccessToken(client_id, client_secret)
     since = '1506902400'
     until = '1508198400'
@@ -157,12 +172,14 @@ def addPosts(client_id, client_secret, site_id, site_name, since_date,until_date
     next_item = url_retry(data_url)
 
     for post in next_item['data']:
-        getPostRelatedData(post, site_name)
+        queryList.extend(getPostRelatedData(post, site_name))
 
-    while 'paging' in next_item and 'next' in next_item['paging']:
-        next_item = url_retry(next_item['paging']['next'])
-        for post in next_item['data']:
-            getPostRelatedData(post, site_name)
+    print(1)
+
+  # #while 'paging' in next_item and 'next' in next_item['paging']:
+  #     next_item = url_retry(next_item['paging']['next'])
+  #     for post in next_item['data']:
+  #         getPostRelatedData(post, site_name)
 
 
 
