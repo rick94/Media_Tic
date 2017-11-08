@@ -15,7 +15,7 @@ AppSecret = '460c5a58dd6ddd6997b2645b1ad37cdd'
 
 
 #queryList = getRangeQueryList(AppID,AppSecret,dicMedios['Financiero'],'El Financiero','','','2.10')
-queryList = getRangeQueryList("264737207353432","460c5a58dd6ddd6997b2645b1ad37cdd","47921680333", "", "","","2.10")
+queryList = getRangeQueryList(AppID,AppSecret,dicMedios['Financiero'], "Financiero", "2017-10-02 00:00:00","2017-10-17 00:00:00","2.10")
 #Connection with the database
 driver = GraphDatabase.driver("bolt://localhost:7687", auth=basic_auth("neo4j", "neo4j"))
 session = driver.session()

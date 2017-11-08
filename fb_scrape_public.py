@@ -3,7 +3,8 @@ import json
 import time
 import urllib.request
 import re
-
+import datetime
+import calendar
 
 def url_retry(url):
     succ = 0
@@ -21,6 +22,10 @@ def url_retry(url):
 
 
 #Métodos propios-----------------------------------------------------------------------
+
+def toUnixTime(date_string):
+    date = datetime.datetime.strptime(date_string, "%Y-%m-%d %H:%M:%S")
+    return str(calendar.timegm(date.utctimetuple()))
 
 
 
@@ -82,10 +87,10 @@ def getCommentRelatedData(comment, post_id):
     if 'reactions' in comment:
         for reaction in comment['reactions']['data']:
             queryList.extend(getReactionRelatedData(reaction,comment['id'],'Comment'))
-            while 'paging' in comment['reactions'] and 'next' in comment['reactions']['paging']:
-                comment['reactions']  = url_retry(comment['reactions']['paging']['next'])
-                for reaction in comment['reactions']['data']:
-                    queryList.extend(getReactionRelatedData(reaction, comment['id'], 'Comment'))
+        while 'paging' in comment['reactions'] and 'next' in comment['reactions']['paging']:
+            comment['reactions']  = url_retry(comment['reactions']['paging']['next'])
+            for reaction in comment['reactions']['data']:
+                queryList.extend(getReactionRelatedData(reaction, comment['id'], 'Comment'))
     return queryList
 
 def getPostRelatedData(post, site_name):
@@ -128,26 +133,25 @@ def getPostRelatedData(post, site_name):
 def getRangeQueryList(client_id, client_secret, site_id, site_name, since_date,until_date, version="2.10"):
     queryList = []
     fb_token = getAccessToken(client_id, client_secret)
-    since = '1506902400'
-    until = '1508198400'
+    since = toUnixTime(since_date)
+    until = toUnixTime(until_date)
     reaction_count_queries = 'reactions.type(LIKE).limit(0).summary(1).as(like),reactions.type(WOW).limit(0).summary(1).as(wow),' \
                              'reactions.type(SAD).limit(0).summary(1).as(sad),reactions.type(HAHA).limit(0).summary(1).as(haha),' \
                              'reactions.type(LOVE).limit(0).summary(1).as(love),reactions.type(ANGRY).limit(0).summary(1).as(angry),'
     field_list = 'id,name,created_time,link,shares,comments{id,from,created_time,comments{id,from,created_time,reactions,message},reactions,message},'+reaction_count_queries+'reactions'
     data_url = 'https://graph.facebook.com/v' + version + '/' + site_id + '/posts?fields=' + field_list + '&limit=100&since='+since+'&until='+until+'&' + fb_token
     next_item = url_retry(data_url)
-
     for post in next_item['data']:
         queryList.extend(getPostRelatedData(post, site_name))
-        while 'paging' in next_item and 'next' in next_item['paging']:
-            next_item = url_retry(next_item['paging']['next'])
-            for post in next_item:
-                queryList.extend(getPostRelatedData(post, site_name))
-
+    while 'paging' in next_item and 'next' in next_item['paging']:
+        next_item = url_retry(next_item['paging']['next'])
+        for post in next_item:
+            queryList.extend(getPostRelatedData(post, site_name))
     return queryList
-
 
 
 #getRangeQueryList("264737207353432","460c5a58dd6ddd6997b2645b1ad37cdd","47921680333", "", "","","2.10")
 
 #115872105050?fields=posts{id,created_time,name}&limit=100
+#print(toUnixTime("2017-10-02 00:00:00"))
+#print(toUnixTime("2017-10-17 00:00:00"))
